@@ -2,7 +2,7 @@
 autoload -U add-zsh-hook
 
 # Logger - Set to 1 to enable verbose logging
-NVM_AUTO_USE_DEBUG=1
+NVM_AUTO_USE_DEBUG=0
 _nvm_log() { [[ "$NVM_AUTO_USE_DEBUG" == "1" ]] && echo "[nvm-auto-use] $1" }
 
 # Function to automatically switch Node versions based on .nvmrc
