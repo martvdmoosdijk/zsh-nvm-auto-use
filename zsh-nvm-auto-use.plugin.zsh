@@ -2,7 +2,7 @@
 autoload -U add-zsh-hook
 
 # Logger - Set to 1 to enable verbose logging
-NVM_AUTO_USE_DEBUG=0
+NVM_AUTO_USE_DEBUG=1
 _nvm_log() { [[ "$NVM_AUTO_USE_DEBUG" == "1" ]] && echo "[nvm-auto-use] $1" }
 
 # Function to automatically switch Node versions based on .nvmrc
@@ -13,13 +13,11 @@ load-nvmrc() {
 
   if ! (( $+functions[nvm] )); then
     _nvm_log "nvm is not loaded, skipping"
-    _nvm_log "Done in $(( (EPOCHREALTIME - _start) * 1000 ))ms"
     return
   fi
 
   if [[ ! -f .nvmrc ]]; then
     _nvm_log "No .nvmrc found, skipping"
-    _nvm_log "Done in $(( (EPOCHREALTIME - _start) * 1000 ))ms"
     return
   fi
 
@@ -32,7 +30,18 @@ load-nvmrc() {
 
   if [[ "$current_version" != "$required_version" ]]; then
     _nvm_log "Switching from $current_version to $nvmrc_version..."
-    nvm use --silent
+
+    # Run nvm use in the current shell (not a subshell) so PATH changes persist
+    local tmpfile=$(mktemp)
+    nvm use "$nvmrc_version" > "$tmpfile" 2>&1
+    local ret=$?
+    if [[ $ret -ne 0 ]]; then
+      echo "[nvm-auto-use] Error: $(cat "$tmpfile")"
+      rm -f "$tmpfile"
+      return
+    fi
+    rm -f "$tmpfile"
+    
     _nvm_log "Now using Node $(nvm version)"
   else
     _nvm_log "Already on the right version, nothing to do"
