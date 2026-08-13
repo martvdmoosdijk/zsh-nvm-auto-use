@@ -7,15 +7,19 @@ _nvm_log() { [[ "$NVM_AUTO_USE_DEBUG" == "1" ]] && echo "[nvm-auto-use] $1" }
 
 # Function to automatically switch Node versions based on .nvmrc
 load-nvmrc() {
+  local _start=$EPOCHREALTIME
+
   _nvm_log "Checking for .nvmrc in $(pwd)"
 
   if ! (( $+functions[nvm] )); then
     _nvm_log "nvm is not loaded, skipping"
+    _nvm_log "Done in $(( (EPOCHREALTIME - _start) * 1000 ))ms"
     return
   fi
 
   if [[ ! -f .nvmrc ]]; then
     _nvm_log "No .nvmrc found, skipping"
+    _nvm_log "Done in $(( (EPOCHREALTIME - _start) * 1000 ))ms"
     return
   fi
 
@@ -33,6 +37,8 @@ load-nvmrc() {
   else
     _nvm_log "Already on the right version, nothing to do"
   fi
+
+  _nvm_log "Done in $(( (EPOCHREALTIME - _start) * 1000 ))ms"
 }
 
 # Run load-nvmrc whenever we change directories (cd)
