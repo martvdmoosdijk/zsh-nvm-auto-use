@@ -1,22 +1,46 @@
-# This loads the add-zsh-hook function, which lets you run a function whenever certain events happen (like changing directories).
+# Load this hook into zsh
 autoload -U add-zsh-hook
+
+# Logger - Set to 1 to enable verbose logging
+NVM_AUTO_USE_DEBUG=0
+_nvm_log() { [[ "$NVM_AUTO_USE_DEBUG" == "1" ]] && echo "[nvm-auto-use] $1" }
 
 # Function to automatically switch Node versions based on .nvmrc
 load-nvmrc() {
-  if ! which nvm &>/dev/null; then
+  _nvm_log "Checking for .nvmrc in $(pwd)"
+
+  if ! (( $+functions[nvm] )); then
+    _nvm_log "nvm is not loaded, skipping"
     return
   fi
 
-  # If a .nvmrc file exists AND the current version isn't the one specified
-  if [[ -f .nvmrc && "$(nvm version)" != "$(nvm version "$(cat .nvmrc)")" ]]; then
-    echo "Change in .nvmrc detected, automatically switched node $(nvm version) to $(cat .nvmrc)"
-    # Use the version specified in .nvmrc silently
+  if [[ ! -f .nvmrc ]]; then
+    _nvm_log "No .nvmrc found, skipping"
+    return
+  fi
+
+  local nvmrc_version=$(<.nvmrc)
+  local current_version=$(nvm version)
+  local required_version=$(nvm version "$nvmrc_version")
+
+  _nvm_log "Found .nvmrc requesting Node $nvmrc_version"
+  _nvm_log "Currently using Node $current_version"
+
+  if [[ "$current_version" != "$required_version" ]]; then
+    _nvm_log "Switching from $current_version to $nvmrc_version..."
     nvm use --silent
+    _nvm_log "Now using Node $(nvm version)"
+  else
+    _nvm_log "Already on the right version, nothing to do"
   fi
 }
 
 # Run load-nvmrc whenever we change directories (cd)
 add-zsh-hook chpwd load-nvmrc
 
-# Also run once when the shell starts
-load-nvmrc
+# Run once on startup after nvm is fully initialized, then remove itself
+_load-nvmrc-once() {
+  load-nvmrc
+  add-zsh-hook -d precmd _load-nvmrc-once
+}
+add-zsh-hook precmd _load-nvmrc-once
